@@ -7,24 +7,54 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { FirebaseError } from 'firebase/app'; // Import FirebaseError
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // TODO: Implement actual login logic here (API call to backend)
-    console.log('Login attempt with:', { email, password });
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-    toast({
-      title: "Login Placeholder",
-      description: "Login functionality is not yet implemented.",
-    });
-    setIsLoading(false);
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      router.push('/chat'); // Redirect to chat page on successful login
+    } catch (error) {
+       console.error('Login error:', error);
+       let errorMessage = "An unknown error occurred during login.";
+        if (error instanceof FirebaseError) { // More specific error handling
+            switch (error.code) {
+              case 'auth/invalid-email':
+                errorMessage = "Invalid email format.";
+                break;
+              case 'auth/user-not-found':
+              case 'auth/wrong-password':
+              case 'auth/invalid-credential': // Catch common invalid credential error
+                 errorMessage = "Invalid email or password.";
+                 break;
+              default:
+                 errorMessage = `Login failed: ${error.message}`;
+            }
+        }
+       toast({
+         title: "Login Failed",
+         description: errorMessage,
+         variant: "destructive",
+       });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,6 +78,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
+                autoComplete="email"
               />
             </div>
             <div className="grid gap-2">
@@ -59,6 +90,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
           </CardContent>
@@ -68,7 +100,7 @@ export default function LoginPage() {
             </Button>
              <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
-                <Link href="/register" className="underline text-primary">
+                <Link href="/register" className="underline text-primary hover:text-primary/80">
                   Sign up
                 </Link>
               </div>

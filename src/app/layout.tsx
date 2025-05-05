@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import Header from '@/components/layout/header'; // Assuming Header component will be created
+import Header from '@/components/layout/header';
+import { AuthProvider } from '@/context/auth-provider'; // Import AuthProvider
 
 export const metadata: Metadata = {
   title: 'NeuroChat - CVST Assistant',
@@ -16,9 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`antialiased`}>
-        {/* <Header /> */} {/* Add Header later when auth is implemented */}
-        <main>{children}</main>
-        <Toaster />
+        <AuthProvider> {/* Wrap with AuthProvider */}
+          <Header /> {/* Include Header */}
+          <main>{children}</main>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

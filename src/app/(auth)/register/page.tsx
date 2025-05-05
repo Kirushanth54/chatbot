@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { FirebaseError } from 'firebase/app'; // Import FirebaseError
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -14,6 +18,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,15 +30,49 @@ export default function RegisterPage() {
       });
       return;
     }
+     if (password.length < 6) {
+       toast({
+         title: "Error",
+         description: "Password must be at least 6 characters long.",
+         variant: "destructive",
+       });
+       return;
+     }
     setIsLoading(true);
-    // TODO: Implement actual registration logic here (API call to backend)
-    console.log('Register attempt with:', { email, password });
-     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-     toast({
-       title: "Registration Placeholder",
-       description: "Registration functionality is not yet implemented.",
-     });
-    setIsLoading(false);
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Registration Successful",
+        description: "Your account has been created. You can now log in.",
+      });
+      router.push('/login'); // Redirect to login page after successful registration
+    } catch (error) {
+      console.error('Registration error:', error);
+       let errorMessage = "An unknown error occurred during registration.";
+        if (error instanceof FirebaseError) { // More specific error handling
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = "This email address is already registered.";
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = "Invalid email format.";
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = "Password is too weak. Please choose a stronger password.";
+                    break;
+                default:
+                    errorMessage = `Registration failed: ${error.message}`;
+            }
+        }
+      toast({
+        title: "Registration Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -57,10 +96,11 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
+                autoComplete="email"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password (min. 6 characters)</Label>
               <Input
                 id="password"
                 type="password"
@@ -68,6 +108,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                  disabled={isLoading}
+                 autoComplete="new-password"
               />
             </div>
             <div className="grid gap-2">
@@ -79,6 +120,7 @@ export default function RegisterPage() {
                  value={confirmPassword}
                  onChange={(e) => setConfirmPassword(e.target.value)}
                  disabled={isLoading}
+                 autoComplete="new-password"
               />
             </div>
           </CardContent>
@@ -88,7 +130,7 @@ export default function RegisterPage() {
             </Button>
             <div className="text-center text-sm">
                Already have an account?{" "}
-               <Link href="/login" className="underline text-primary">
+               <Link href="/login" className="underline text-primary hover:text-primary/80">
                  Login
                </Link>
              </div>
