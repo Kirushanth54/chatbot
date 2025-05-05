@@ -1,3 +1,7 @@
+
+import { redirect } from 'next/navigation';
+
 export default function Home() {
-  return <></>;
+  // Redirect to the chat page as the main interface
+  redirect('/chat');
 }
