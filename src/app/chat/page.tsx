@@ -11,13 +11,13 @@ export default function ChatPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If not loading and no user is found, redirect to login
+    // If not loading and no user is found (from local storage), redirect to login
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
-  // Show loading state while checking authentication
+  // Show loading state while checking local storage
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-secondary">
@@ -26,7 +26,7 @@ export default function ChatPage() {
     );
   }
 
-  // Only render ChatInterface if user is authenticated
+  // Only render ChatInterface if user exists in local storage state
   if (user) {
     return (
        // Removed the extra header here as it's now in the main layout
@@ -34,6 +34,6 @@ export default function ChatPage() {
     );
   }
 
-  // If not loading and no user (should be redirected, but good to have a fallback)
+  // Fallback while redirecting (should be brief)
   return null; // Or return a message indicating redirection
 }

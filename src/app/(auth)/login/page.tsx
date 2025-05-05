@@ -1,55 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { FirebaseError } from 'firebase/app'; // Import FirebaseError
+import { useAuth } from '@/context/auth-provider'; // Import useAuth
+
+// Removed Firebase imports
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(''); // Password check is now dummy
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
+  const { login } = useAuth(); // Get login function from context
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    // Simulate login delay (optional)
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Basic validation (can be expanded)
+    if (!email || !password) {
+       toast({
+         title: "Login Failed",
+         description: "Please enter both email and password.",
+         variant: "destructive",
+       });
+       setIsLoading(false);
+       return;
+    }
+
+    // --- Local Storage Login Logic ---
+    // In a real local-storage-only scenario without a backend,
+    // you might just check if the email "exists" in some local user list
+    // or simply proceed if the format is valid.
+    // For this example, we'll just assume any valid email format logs in.
+    // A more robust local setup might involve checking against data stored during registration.
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Call the login function from AuthProvider
+      login(email);
+
       toast({
         title: "Login Successful",
         description: "Welcome back!",
       });
-      router.push('/chat'); // Redirect to chat page on successful login
+      router.push('/chat'); // Redirect to chat page
     } catch (error) {
+       // Catch potential errors from the login function (e.g., storage issues)
        console.error('Login error:', error);
-       let errorMessage = "An unknown error occurred during login.";
-        if (error instanceof FirebaseError) { // More specific error handling
-            switch (error.code) {
-              case 'auth/invalid-email':
-                errorMessage = "Invalid email format.";
-                break;
-              case 'auth/user-not-found':
-              case 'auth/wrong-password':
-              case 'auth/invalid-credential': // Catch common invalid credential error
-                 errorMessage = "Invalid email or password.";
-                 break;
-              default:
-                 errorMessage = `Login failed: ${error.message}`;
-            }
-        }
        toast({
          title: "Login Failed",
-         description: errorMessage,
+         description: "An unexpected error occurred during login.",
          variant: "destructive",
        });
     } finally {
@@ -91,6 +101,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading}
                 autoComplete="current-password"
+                // Note: Password is not actually verified against anything in this local example
               />
             </div>
           </CardContent>

@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+// Removed: import { getAuth } from 'firebase/auth';
+// Removed: import { getFirestore } from 'firebase/firestore';
 // import { getAnalytics } from "firebase/analytics"; // Optional: If you want Analytics
 
 const firebaseConfig = {
@@ -13,10 +13,12 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
 };
 
-// Initialize Firebase
+// Initialize Firebase (still needed if other Firebase services are used)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const db = getFirestore(app);
+// Removed: const auth = getAuth(app);
+// Removed: const db = getFirestore(app);
 // const analytics = getAnalytics(app); // Optional
 
-export { app, auth, db };
+// Export only the app instance if needed, otherwise this file might be removable
+// if no other Firebase services are used.
+export { app };

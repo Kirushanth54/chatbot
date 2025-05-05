@@ -3,21 +3,21 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { BrainCircuit, LogOut } from 'lucide-react';
-import { useAuth } from '@/context/auth-provider';
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
+import { useAuth } from '@/context/auth-provider'; // Import useAuth
+// Removed Firebase imports: import { auth } from '@/lib/firebase';
+// Removed Firebase imports: import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Header() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth(); // Get user, loading, and logout from context
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleLogout = async () => {
+  const handleLogout = () => { // No longer async as local storage ops are sync
     try {
-      await signOut(auth);
+      logout(); // Call logout from AuthProvider
       toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
       router.push('/login'); // Redirect to login after logout
     } catch (error) {
@@ -43,6 +43,7 @@ export default function Header() {
         <div className="flex items-center space-x-2">
            {loading ? (
              <>
+                {/* Keep loading skeleton */}
                 <Skeleton className="h-8 w-16" />
                 <Skeleton className="h-8 w-20" />
              </>

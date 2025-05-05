@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { FirebaseError } from 'firebase/app'; // Import FirebaseError
+// Removed Firebase imports
+
+// Optional: Define a key for storing registered users if needed for basic checks
+const LOCAL_STORAGE_REGISTERED_USERS_KEY = 'neurochat_registered_users';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -20,7 +21,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       toast({
@@ -40,36 +41,43 @@ export default function RegisterPage() {
      }
     setIsLoading(true);
 
+    // Simulate registration delay
+     await new Promise(resolve => setTimeout(resolve, 300));
+
+    // --- Local Storage Registration Logic ---
+    // This is a very basic simulation. A real local-only app might store
+    // registered emails (and perhaps hashed passwords) in local storage
+    // to prevent duplicate registrations or verify logins later.
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      toast({
-        title: "Registration Successful",
-        description: "Your account has been created. You can now log in.",
-      });
-      router.push('/login'); // Redirect to login page after successful registration
+        // Optional: Check if email already "exists" in local storage
+        // const registeredUsersRaw = localStorage.getItem(LOCAL_STORAGE_REGISTERED_USERS_KEY);
+        // const registeredUsers = registeredUsersRaw ? JSON.parse(registeredUsersRaw) : [];
+        // if (registeredUsers.includes(email)) {
+        //     toast({ title: "Registration Failed", description: "This email is already registered.", variant: "destructive" });
+        //     setIsLoading(false);
+        //     return;
+        // }
+
+        // Optional: Add the new email to the list
+        // registeredUsers.push(email);
+        // localStorage.setItem(LOCAL_STORAGE_REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
+
+        // --- End Optional Check ---
+
+        // Since login doesn't verify password, we just need to show success
+        toast({
+            title: "Registration Successful",
+            description: "Your account has been 'created'. You can now log in.", // Wording adjusted
+        });
+        router.push('/login'); // Redirect to login page
+
     } catch (error) {
-      console.error('Registration error:', error);
-       let errorMessage = "An unknown error occurred during registration.";
-        if (error instanceof FirebaseError) { // More specific error handling
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    errorMessage = "This email address is already registered.";
-                    break;
-                case 'auth/invalid-email':
-                    errorMessage = "Invalid email format.";
-                    break;
-                case 'auth/weak-password':
-                    errorMessage = "Password is too weak. Please choose a stronger password.";
-                    break;
-                default:
-                    errorMessage = `Registration failed: ${error.message}`;
-            }
-        }
-      toast({
-        title: "Registration Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+         console.error('Registration simulation error:', error);
+         toast({
+            title: "Registration Failed",
+            description: "An unexpected error occurred during registration simulation.",
+            variant: "destructive",
+         });
     } finally {
       setIsLoading(false);
     }
