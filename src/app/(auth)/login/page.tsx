@@ -53,7 +53,7 @@ export default function LoginPage() {
         title: "Login Successful",
         description: "Welcome back!",
       });
-      router.push('/chat'); // Redirect to chat page
+      router.push('/chat'); // Redirect to chat page (now in app group)
     } catch (error) {
        // Catch potential errors from the login function (e.g., storage issues)
        console.error('Login error:', error);

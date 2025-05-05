@@ -9,6 +9,7 @@ import { useAuth } from '@/context/auth-provider'; // Import useAuth
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SidebarTrigger } from '@/components/ui/sidebar'; // Import SidebarTrigger
 
 export default function Header() {
   const { user, loading, logout } = useAuth(); // Get user, loading, and logout from context
@@ -31,40 +32,45 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center">
-        <Link href={user ? "/chat" : "/"} className="mr-6 flex items-center space-x-2">
-           <BrainCircuit className="h-6 w-6 text-primary" />
-          <span className="hidden font-bold sm:inline-block">NeuroChat</span>
-        </Link>
-        <nav className="flex flex-1 items-center space-x-4">
-          {/* Navigation items can go here later */}
-        </nav>
-        <div className="flex items-center space-x-2">
-           {loading ? (
-             <>
-                {/* Keep loading skeleton */}
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-8 w-20" />
-             </>
-           ) : user ? (
-             <>
-              <span className="text-sm text-muted-foreground hidden sm:inline-block">{user.email}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                 <LogOut className="mr-2 h-4 w-4" /> Logout
-               </Button>
-             </>
-           ) : (
-             <>
-               <Button variant="outline" size="sm" asChild>
-                   <Link href="/login">Login</Link>
-               </Button>
-               <Button size="sm" asChild>
-                  <Link href="/register">Sign Up</Link>
-               </Button>
-             </>
-           )}
-        </div>
+    // Removed sticky and backdrop-blur as it might interfere with flex layout in AppLayout
+    <header className="w-full border-b bg-background h-14 flex items-center px-4 shrink-0">
+      {/* Sidebar Trigger - Only shown when a user is logged in */}
+       {user && !loading && (
+            <SidebarTrigger className="mr-2 md:hidden" /> // Show on mobile, hidden on md+
+        )}
+
+      <Link href={user ? "/chat" : "/"} className="mr-6 flex items-center space-x-2">
+         <BrainCircuit className="h-6 w-6 text-primary" />
+        <span className="hidden font-bold sm:inline-block">NeuroChat</span>
+      </Link>
+
+      <nav className="flex flex-1 items-center space-x-4">
+        {/* Navigation items can go here later */}
+      </nav>
+      <div className="flex items-center space-x-2">
+         {loading ? (
+           <>
+              {/* Keep loading skeleton */}
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-8 w-20" />
+           </>
+         ) : user ? (
+           <>
+            <span className="text-sm text-muted-foreground hidden sm:inline-block">{user.email}</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+               <LogOut className="mr-2 h-4 w-4" /> Logout
+             </Button>
+           </>
+         ) : (
+           <>
+             <Button variant="outline" size="sm" asChild>
+                 <Link href="/login">Login</Link>
+             </Button>
+             <Button size="sm" asChild>
+                <Link href="/register">Sign Up</Link>
+             </Button>
+           </>
+         )}
       </div>
     </header>
   );

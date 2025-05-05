@@ -11,7 +11,7 @@ export default function Home() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        redirect('/chat'); // User found in local storage, go to chat
+        redirect('/chat'); // User found in local storage, go to chat (in app group)
       } else {
         redirect('/login'); // No user found, go to login
       }

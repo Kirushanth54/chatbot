@@ -20,7 +20,7 @@ export default function ChatPage() {
   // Show loading state while checking local storage
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-secondary">
+      <div className="flex flex-1 items-center justify-center bg-secondary">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -29,8 +29,7 @@ export default function ChatPage() {
   // Only render ChatInterface if user exists in local storage state
   if (user) {
     return (
-       // Removed the extra header here as it's now in the main layout
-        <ChatInterface />
+        <ChatInterface /> // Chat interface takes up the remaining space
     );
   }
 

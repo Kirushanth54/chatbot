@@ -37,7 +37,14 @@ export function useChatHistory() {
         const parsedHistory = JSON.parse(storedHistory);
         // Basic validation if needed (e.g., check if it's an array)
         if (Array.isArray(parsedHistory)) {
-           setChatHistory(parsedHistory);
+           // Add validation for message structure if necessary
+           const validHistory = parsedHistory.filter(msg =>
+             msg && typeof msg.id === 'string' && typeof msg.text === 'string' && typeof msg.sender === 'string' && typeof msg.timestamp === 'string'
+           );
+           if (validHistory.length !== parsedHistory.length) {
+               console.warn("Some invalid messages filtered from chat history.");
+           }
+           setChatHistory(validHistory);
         } else {
             console.warn("Invalid chat history format found in local storage.");
             localStorage.removeItem(storageKey); // Clear invalid data
@@ -67,8 +74,9 @@ export function useChatHistory() {
    useEffect(() => {
        const handleStorageChange = (event: StorageEvent) => {
            const storageKey = getChatHistoryKey(user?.email || null);
-           if (event.key === storageKey) {
-                loadHistory(); // Reload history if the relevant key changed
+           // Reload if the key matches OR if the key becomes null (user logged out)
+           if (event.key === storageKey || (event.key === null && !localStorage.getItem(storageKey!))) {
+                loadHistory(); // Reload history if the relevant key changed or was removed
            }
        };
 
@@ -95,6 +103,14 @@ export function useChatHistory() {
           // icon is handled dynamically in the UI, not stored
       };
 
+       // Validate the new message structure before saving (optional but recommended)
+       if (!newMessage.id || !newMessage.text || !newMessage.sender || !newMessage.timestamp) {
+           console.error("Attempted to save an invalid message:", newMessage);
+           setError("Failed to save message due to invalid format.");
+           return;
+       }
+
+
       try {
           // Read current history
           const storedHistoryRaw = localStorage.getItem(storageKey);
@@ -103,7 +119,8 @@ export function useChatHistory() {
               try {
                   const parsed = JSON.parse(storedHistoryRaw);
                    if (Array.isArray(parsed)) {
-                       currentHistory = parsed;
+                       // Further validation can be added here to ensure each item in parsed is a valid ChatHistoryMessage
+                       currentHistory = parsed.filter(msg => msg && typeof msg.id === 'string'); // Basic check
                    } else {
                         console.warn("Overwriting invalid chat history format in local storage during save.");
                    }
@@ -124,10 +141,36 @@ export function useChatHistory() {
       } catch (err) {
         console.error('Error saving message to local storage:', err);
         setError('Failed to save message.');
+        // Handle potential storage quota errors
+        if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+            setError('Chat history storage limit reached. Cannot save new messages.');
+            // Consider notifying the user more prominently
+        }
       }
     },
     [user] // Dependency: only re-create function if user changes
   );
 
-  return { chatHistory, loading, error, saveMessage };
+   // Function to clear chat history from local storage
+   const clearChatHistory = useCallback(() => {
+       const storageKey = getChatHistoryKey(user?.email || null);
+       if (!storageKey) {
+           setError('You must be logged in to clear chat history.');
+           throw new Error('User not logged in'); // Throw error to indicate failure
+       }
+       setError(null); // Clear previous errors
+
+       try {
+           localStorage.removeItem(storageKey);
+           setChatHistory([]); // Clear the state immediately
+           console.log('Chat history cleared for user:', user?.email);
+       } catch (err) {
+           console.error('Error clearing chat history from local storage:', err);
+           setError('Failed to clear chat history.');
+           throw err; // Re-throw error to indicate failure
+       }
+   }, [user]);
+
+
+  return { chatHistory, loading, error, saveMessage, clearChatHistory }; // Expose clearChatHistory
 }

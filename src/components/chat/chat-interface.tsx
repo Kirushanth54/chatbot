@@ -17,7 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // 
 export interface Message extends ChatHistoryMessage {} // Can just extend now
 
 // Dummy function to simulate fetching bot response (remains the same)
-async function getBotResponse(message: string): Promise<Omit<Message, 'id' | 'timestamp' | 'firestoreId' | 'icon'>> { // Adjusted Omit type
+async function getBotResponse(message: string): Promise<Omit<Message, 'id' | 'timestamp' | 'icon'>> { // Adjusted Omit type
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
     const lowerCaseMessage = message.toLowerCase();
@@ -82,13 +82,14 @@ export default function ChatInterface() {
   // Scroll to bottom effect (remains the same)
   useEffect(() => {
     if (viewportRef.current) {
+        // A small delay ensures the DOM has updated before scrolling
         setTimeout(() => {
             if (viewportRef.current) {
                  viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
             }
-        }, 100);
+        }, 0); // 0ms delay often works, adjust if needed
     }
-  }, [currentMessages, isBotResponding]);
+  }, [currentMessages, isBotResponding]); // Rerun when messages change or bot starts/stops responding
 
 
   const handleSendMessage = async (e: FormEvent) => {
@@ -101,7 +102,7 @@ export default function ChatInterface() {
         return;
     }
 
-    const userMessageData: Omit<Message, 'id' | 'timestamp' | 'firestoreId' | 'icon'> = { // Adjusted Omit
+    const userMessageData: Omit<Message, 'id' | 'timestamp' | 'icon'> = { // Adjusted Omit
       text: trimmedInput,
       sender: 'user',
     };
@@ -155,10 +156,13 @@ export default function ChatInterface() {
 
 
   return (
-    <div className="flex flex-col flex-1 h-[calc(100vh-3.5rem)] bg-secondary"> {/* Adjust height considering header */}
-       <div className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8 flex flex-col">
+    // Use flex-1 to take remaining height within the AppLayout's flex container
+    // Remove explicit height calculation (h-[calc(100vh-3.5rem)])
+    <div className="flex flex-col flex-1 bg-secondary overflow-hidden">
+       {/* Make the inner container also flex and take full height */}
+       <div className="flex flex-col flex-1 p-4 md:p-6 lg:p-8 overflow-hidden">
           {historyError && (
-             <Alert variant="destructive" className="mb-4">
+             <Alert variant="destructive" className="mb-4 shrink-0"> {/* Don't let error grow */}
                <AlertCircle className="h-4 w-4" />
                <AlertTitle>Error</AlertTitle>
                <AlertDescription>{historyError}</AlertDescription>
@@ -169,6 +173,7 @@ export default function ChatInterface() {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                </div>
            ) : (
+              // ScrollArea needs flex-1 to fill available space before the form
               <ScrollArea className="flex-1 w-full mb-4 pr-4" ref={scrollAreaRef}>
                 <div className="space-y-4" ref={viewportRef}>
                   {currentMessages.map((message, index) => (
@@ -179,7 +184,7 @@ export default function ChatInterface() {
                       }`}
                     >
                       {message.sender === 'bot' && (
-                        <Avatar className="w-8 h-8 self-end mb-1">
+                        <Avatar className="w-8 h-8 self-end mb-1 shrink-0"> {/* Added shrink-0 */}
                             <AvatarFallback className="bg-primary text-primary-foreground">
                                 <Bot size={18} />
                             </AvatarFallback>
@@ -208,7 +213,7 @@ export default function ChatInterface() {
                          </CardContent>
                       </Card>
                        {message.sender === 'user' && (
-                         <Avatar className="w-8 h-8 self-end mb-1">
+                         <Avatar className="w-8 h-8 self-end mb-1 shrink-0"> {/* Added shrink-0 */}
                              <AvatarFallback className="bg-accent text-accent-foreground">
                                  <User size={18} />
                              </AvatarFallback>
@@ -218,7 +223,7 @@ export default function ChatInterface() {
                   ))}
                   {isBotResponding && (
                      <div className="flex items-end gap-2 justify-start">
-                         <Avatar className="w-8 h-8 self-end mb-1">
+                         <Avatar className="w-8 h-8 self-end mb-1 shrink-0"> {/* Added shrink-0 */}
                              <AvatarFallback className="bg-primary text-primary-foreground">
                                  <Bot size={18} />
                              </AvatarFallback>
@@ -236,7 +241,8 @@ export default function ChatInterface() {
               </ScrollArea>
             )}
 
-           <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t pt-4 bg-secondary">
+           {/* Form should not grow, stick to the bottom */}
+           <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t pt-4 bg-secondary shrink-0">
              <Input
                type="text"
                placeholder={user ? "Ask about CVST..." : "Please log in to chat"}
