@@ -19,6 +19,7 @@ import Link from 'next/link'; // Keep Link for header icon
 import { ConfirmationDialog } from '@/components/shared/confirmation-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area'; // For long list of chats
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
+import { cn } from '@/lib/utils'; // Import cn for conditional classes
 
 export default function AppSidebar() {
   const {
@@ -134,36 +135,40 @@ export default function AppSidebar() {
                  ) : (
                     // Map over existing chat sessions
                     sessions.map((session) => (
-                        <SidebarMenuItem key={session.id}>
+                        <SidebarMenuItem key={session.id} className="flex items-center gap-1"> {/* Use flex container */}
                             <SidebarMenuButton
                                 isActive={session.id === activeSessionId}
                                 tooltip={{ children: session.title }}
                                 aria-label={`Chat: ${session.title}`}
-                                className="w-full justify-start group-data-[collapsible=icon]:justify-center"
+                                className="flex-1 justify-start group-data-[collapsible=icon]:justify-center overflow-hidden" // Allow button to take available space
                                 onClick={() => setActiveSessionId(session.id)}
                             >
                                 <MessageSquare />
                                 <span>{session.title}</span>
-
-                                {/* Delete Button for each chat item */}
-                                <ConfirmationDialog
-                                    title="Delete Chat?"
-                                    description={`Are you sure you want to delete the chat "${session.title}"? This cannot be undone.`}
-                                    confirmText="Delete"
-                                    onConfirm={() => handleDeleteChat(session.id, session.title)}
-                                    trigger={
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="ml-auto h-6 w-6 text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 group-data-[collapsible=icon]:hidden"
-                                            onClick={(e) => e.stopPropagation()} // Prevent triggering session switch
-                                            aria-label={`Delete chat ${session.title}`}
-                                        >
-                                            <Trash2 size={14} />
-                                        </Button>
-                                    }
-                                />
+                                {/* Delete button moved outside */}
                             </SidebarMenuButton>
+
+                            {/* Delete Button - placed next to the menu button */}
+                            <ConfirmationDialog
+                                title="Delete Chat?"
+                                description={`Are you sure you want to delete the chat "${session.title}"? This cannot be undone.`}
+                                confirmText="Delete"
+                                onConfirm={() => handleDeleteChat(session.id, session.title)}
+                                trigger={
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className={cn(
+                                            "h-6 w-6 text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 shrink-0", // Added shrink-0
+                                            "group-data-[collapsible=icon]:hidden" // Hide when collapsed
+                                        )}
+                                        onClick={(e) => e.stopPropagation()} // Prevent triggering session switch
+                                        aria-label={`Delete chat ${session.title}`}
+                                    >
+                                        <Trash2 size={14} />
+                                    </Button>
+                                }
+                            />
                         </SidebarMenuItem>
                     ))
                 )}
