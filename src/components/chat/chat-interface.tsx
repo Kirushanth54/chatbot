@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
@@ -65,78 +66,84 @@ async function getBotResponse(message: string): Promise<Omit<Message, 'id' | 'ti
 }
 
 export default function ChatInterface() {
-  const { user } = useAuth(); // Get user from Auth context (now using local storage)
-  const { chatHistory, loading: historyLoading, error: historyError, saveMessage } = useChatHistory(); // Using local storage hook
-  const [currentMessages, setCurrentMessages] = useState<Message[]>([]); // Local state for UI display
+  const { user } = useAuth(); // Get user from Auth context
+  // Use the hook to get history for the *active* session
+  const {
+      chatHistory, // This is now the history for the active session
+      loading: historyLoading,
+      error: historyError,
+      saveMessage, // Saves message to the active session
+      activeSessionId, // Use this to know which chat is displayed
+  } = useChatHistory();
+
   const [inputValue, setInputValue] = useState('');
   const [isBotResponding, setIsBotResponding] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-   // Effect to update UI state when chatHistory from the hook changes
-   useEffect(() => {
-       setCurrentMessages(chatHistory);
-   }, [chatHistory]);
+   // currentMessages state is no longer needed as chatHistory updates directly
+   // const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
+   // useEffect(() => {
+   //     setCurrentMessages(chatHistory);
+   // }, [chatHistory]);
 
-  // Scroll to bottom effect (remains the same)
+  // Scroll to bottom effect - now depends on chatHistory directly
   useEffect(() => {
     if (viewportRef.current) {
-        // A small delay ensures the DOM has updated before scrolling
         setTimeout(() => {
             if (viewportRef.current) {
                  viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
             }
-        }, 0); // 0ms delay often works, adjust if needed
+        }, 100); // Increased delay slightly to ensure DOM update after history load/change
     }
-  }, [currentMessages, isBotResponding]); // Rerun when messages change or bot starts/stops responding
+  }, [chatHistory, isBotResponding]); // Rerun when messages change or bot starts/stops responding
 
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     const trimmedInput = inputValue.trim();
-    if (!trimmedInput || !user) {
+    if (!trimmedInput || !user || !activeSessionId) { // Check for active session
         if (!user) {
             toast({ title: "Login Required", description: "Please log in to chat.", variant: "destructive" });
+        } else if (!activeSessionId) {
+             toast({ title: "No Active Chat", description: "Please select or create a chat.", variant: "destructive" });
         }
         return;
     }
 
-    const userMessageData: Omit<Message, 'id' | 'timestamp' | 'icon'> = { // Adjusted Omit
+    const userMessageData: Omit<Message, 'id' | 'timestamp' | 'icon'> = {
       text: trimmedInput,
       sender: 'user',
     };
 
-    // --- No more optimistic UI update here ---
-    // `saveMessage` now updates the state directly via `setChatHistory`
-    // We'll see the user message appear once it's saved to local storage.
-
     setInputValue('');
-    setIsBotResponding(true); // Show bot typing indicator immediately
+    setIsBotResponding(true);
 
     try {
-      // Save user message to Local Storage (this also updates the UI state)
+      // Save user message to the active session's history (updates UI via hook)
       await saveMessage(userMessageData);
 
       // Get bot response
       const botResponseData = await getBotResponse(trimmedInput);
 
-      // Save bot response to Local Storage (this also updates the UI state)
+      // Save bot response to the active session's history (updates UI via hook)
       await saveMessage(botResponseData);
 
     } catch (error) {
         console.error('Error processing message:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         toast({
             title: 'Error',
-            description: `Failed to process message: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            description: `Failed to process message: ${errorMessage}`,
             variant: 'destructive',
         });
-        // Optionally save an error message to history as well
-         const errorText = "Sorry, I encountered an error. Please try again.";
+        // Optionally save an error message to history
+         const errorText = `Sorry, I encountered an error: ${errorMessage}. Please try again.`;
          await saveMessage({ text: errorText, sender: 'bot' });
 
     } finally {
-        setIsBotResponding(false); // Hide bot typing indicator
+        setIsBotResponding(false);
     }
   };
 
@@ -156,35 +163,40 @@ export default function ChatInterface() {
 
 
   return (
-    // Use flex-1 to take remaining height within the AppLayout's flex container
-    // Remove explicit height calculation (h-[calc(100vh-3.5rem)])
     <div className="flex flex-col flex-1 bg-secondary overflow-hidden">
-       {/* Make the inner container also flex and take full height */}
        <div className="flex flex-col flex-1 p-4 md:p-6 lg:p-8 overflow-hidden">
           {historyError && (
-             <Alert variant="destructive" className="mb-4 shrink-0"> {/* Don't let error grow */}
+             <Alert variant="destructive" className="mb-4 shrink-0">
                <AlertCircle className="h-4 w-4" />
                <AlertTitle>Error</AlertTitle>
                <AlertDescription>{historyError}</AlertDescription>
              </Alert>
            )}
-           {historyLoading && !currentMessages.length ? ( // Show loader only if history is loading AND no messages yet
+           {/* Show loader specifically when history is loading for the active session */}
+           {historyLoading ? (
                <div className="flex-1 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-3 text-muted-foreground">Loading messages...</p>
                </div>
            ) : (
-              // ScrollArea needs flex-1 to fill available space before the form
               <ScrollArea className="flex-1 w-full mb-4 pr-4" ref={scrollAreaRef}>
                 <div className="space-y-4" ref={viewportRef}>
-                  {currentMessages.map((message, index) => (
+                   {chatHistory.length === 0 && !isBotResponding && (
+                        <div className="text-center text-muted-foreground mt-10">
+                            <p>Start the conversation!</p>
+                            <p className="text-sm">Ask about CVST symptoms, diagnosis, or treatment.</p>
+                        </div>
+                    )}
+                  {/* Render messages from chatHistory (which is now for the active session) */}
+                  {chatHistory.map((message) => (
                     <div
-                      key={message.id || `msg-${index}`} // Use message ID from local storage
+                      key={message.id} // Use message ID from local storage
                       className={`flex items-end gap-2 ${
                         message.sender === 'user' ? 'justify-end' : 'justify-start'
                       }`}
                     >
                       {message.sender === 'bot' && (
-                        <Avatar className="w-8 h-8 self-end mb-1 shrink-0"> {/* Added shrink-0 */}
+                        <Avatar className="w-8 h-8 self-end mb-1 shrink-0">
                             <AvatarFallback className="bg-primary text-primary-foreground">
                                 <Bot size={18} />
                             </AvatarFallback>
@@ -213,7 +225,7 @@ export default function ChatInterface() {
                          </CardContent>
                       </Card>
                        {message.sender === 'user' && (
-                         <Avatar className="w-8 h-8 self-end mb-1 shrink-0"> {/* Added shrink-0 */}
+                         <Avatar className="w-8 h-8 self-end mb-1 shrink-0">
                              <AvatarFallback className="bg-accent text-accent-foreground">
                                  <User size={18} />
                              </AvatarFallback>
@@ -223,7 +235,7 @@ export default function ChatInterface() {
                   ))}
                   {isBotResponding && (
                      <div className="flex items-end gap-2 justify-start">
-                         <Avatar className="w-8 h-8 self-end mb-1 shrink-0"> {/* Added shrink-0 */}
+                         <Avatar className="w-8 h-8 self-end mb-1 shrink-0">
                              <AvatarFallback className="bg-primary text-primary-foreground">
                                  <Bot size={18} />
                              </AvatarFallback>
@@ -241,7 +253,7 @@ export default function ChatInterface() {
               </ScrollArea>
             )}
 
-           {/* Form should not grow, stick to the bottom */}
+           {/* Form section remains largely the same */}
            <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t pt-4 bg-secondary shrink-0">
              <Input
                type="text"
@@ -249,10 +261,10 @@ export default function ChatInterface() {
                value={inputValue}
                onChange={(e) => setInputValue(e.target.value)}
                className="flex-1 bg-background focus-visible:ring-offset-0 focus-visible:ring-accent"
-               disabled={isBotResponding || !user || historyLoading} // Disable input when bot is typing, not logged in, or history still loading initially
+               disabled={isBotResponding || !user || historyLoading || !activeSessionId} // Disable if no active session
                aria-label="Chat input"
              />
-             <Button type="submit" size="icon" className="bg-accent hover:bg-accent/90" disabled={isBotResponding || !inputValue.trim() || !user || historyLoading} aria-label="Send message">
+             <Button type="submit" size="icon" className="bg-accent hover:bg-accent/90" disabled={isBotResponding || !inputValue.trim() || !user || historyLoading || !activeSessionId} aria-label="Send message">
                {isBotResponding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
              </Button>
            </form>

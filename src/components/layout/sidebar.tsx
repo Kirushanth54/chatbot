@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -11,97 +12,188 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MessageSquare, Trash2 } from 'lucide-react'; // Added Trash2 for potential future use
-import { useChatHistory } from '@/lib/hooks/use-chat-history';
+import { PlusCircle, MessageSquare, Trash2, Loader2 } from 'lucide-react'; // Added Trash2 and Loader2
+import { useChatHistory, type ChatSession } from '@/lib/hooks/use-chat-history'; // Import ChatSession type
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
-import { ConfirmationDialog } from '@/components/shared/confirmation-dialog'; // Import ConfirmationDialog
+import Link from 'next/link'; // Keep Link for header icon
+import { ConfirmationDialog } from '@/components/shared/confirmation-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area'; // For long list of chats
+import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 export default function AppSidebar() {
-  const { clearChatHistory } = useChatHistory();
+  const {
+      sessions,
+      activeSessionId,
+      setActiveSessionId,
+      createNewSession,
+      deleteSession,
+      loading: historyLoading // Use loading state from hook
+  } = useChatHistory();
   const { toast } = useToast();
 
-  const performClearHistory = () => {
+  const handleCreateNewChat = () => {
     try {
-      clearChatHistory();
-      toast({
-        title: 'Chat Cleared',
-        description: 'Your current chat history has been cleared.',
-      });
-      // Optionally force a refresh or navigate if state update isn't immediate enough
-      // window.location.reload(); // Example: simple refresh
+      const newId = createNewSession();
+      if (newId) {
+        toast({
+          title: 'New Chat Started',
+        });
+        // Navigation/UI update is handled by activeSessionId change
+      } else {
+         toast({
+            title: 'Error',
+            description: 'Could not start a new chat.',
+            variant: 'destructive',
+         });
+      }
     } catch (error) {
-      console.error('Failed to clear chat history:', error);
+      console.error('Failed to create new chat session:', error);
       toast({
         title: 'Error',
-        description: 'Could not clear the chat history.',
+        description: 'Could not start a new chat.',
         variant: 'destructive',
       });
     }
+  };
+
+  const handleDeleteChat = (sessionId: string, sessionTitle: string) => {
+      try {
+          deleteSession(sessionId);
+          toast({
+             title: 'Chat Deleted',
+             description: `"${sessionTitle}" has been deleted.`,
+          });
+          // UI update is handled by sessions state change
+      } catch (error) {
+          console.error('Failed to delete chat session:', error);
+          toast({
+              title: 'Error',
+              description: `Could not delete chat "${sessionTitle}".`,
+              variant: 'destructive',
+          });
+      }
   };
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
       <SidebarHeader className="p-2 hidden group-data-[collapsible=icon]:flex justify-center">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/chat" aria-label="Current Chat">
+          {/* Link might not be needed if switching is handled by buttons */}
+          <Link href="#" aria-label="Current Chat" onClick={(e) => { e.preventDefault(); if (activeSessionId) setActiveSessionId(activeSessionId);}}>
             <MessageSquare size={20} />
           </Link>
         </Button>
       </SidebarHeader>
       <SidebarHeader className="p-2 flex justify-between items-center group-data-[collapsible=icon]:hidden">
         <span className="font-semibold text-lg text-sidebar-foreground/90">Chat History</span>
-        {/* Placeholder */}
+        {/* New Chat Button - Top Right (only when expanded) */}
+         <ConfirmationDialog
+           title="Start New Chat?"
+           description="This will create a new empty chat session." // Updated description
+           confirmText="Create New Chat"
+           onConfirm={handleCreateNewChat}
+           trigger={
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent h-7 w-7"
+                    aria-label="Start New Chat"
+                >
+                    <PlusCircle size={18} />
+                </Button>
+           }
+         />
       </SidebarHeader>
 
-      <SidebarContent className="flex-1 overflow-y-auto p-2">
-        <SidebarMenu>
-          {/* New Chat Button with Confirmation */}
-          <SidebarMenuItem>
-             <ConfirmationDialog
-               title="Start New Chat?"
-               description="This will clear your current chat history. Are you sure?"
-               confirmText="Clear History"
-               onConfirm={performClearHistory}
-               trigger={
-                  <SidebarMenuButton
-                     tooltip={{ children: 'Start New Chat (Clears History)' }}
-                     aria-label="Start New Chat and Clear History"
-                     className="w-full justify-start"
-                   >
-                     <PlusCircle />
-                     <span>New Chat</span>
-                   </SidebarMenuButton>
-               }
-             />
-          </SidebarMenuItem>
+       {/* Scrollable Content Area */}
+       <SidebarContent className="flex-1 p-0"> {/* Remove default padding */}
+          <ScrollArea className="h-full p-2"> {/* Add padding inside ScrollArea */}
+            <SidebarMenu>
+                {historyLoading && sessions.length === 0 ? (
+                    // Show skeletons while loading initial sessions
+                    <>
+                        <SidebarMenuItem><Skeleton className="h-8 w-full" /></SidebarMenuItem>
+                        <SidebarMenuItem><Skeleton className="h-8 w-full" /></SidebarMenuItem>
+                        <SidebarMenuItem><Skeleton className="h-8 w-full" /></SidebarMenuItem>
+                    </>
+                ) : sessions.length === 0 && !historyLoading ? (
+                     <SidebarMenuItem>
+                         <p className="text-xs text-sidebar-foreground/60 px-2 text-center group-data-[collapsible=icon]:hidden">
+                            No chats yet. Click '+' to start.
+                         </p>
+                          <SidebarMenuButton
+                             onClick={handleCreateNewChat}
+                             tooltip={{ children: 'Start New Chat' }}
+                             aria-label="Start New Chat"
+                             className="w-full justify-center group-data-[collapsible=icon]:justify-center hidden group-data-[collapsible=icon]:flex"
+                           >
+                             <PlusCircle />
+                             <span className="sr-only">New Chat</span>
+                           </SidebarMenuButton>
+                     </SidebarMenuItem>
+                 ) : (
+                    // Map over existing chat sessions
+                    sessions.map((session) => (
+                        <SidebarMenuItem key={session.id}>
+                            <SidebarMenuButton
+                                isActive={session.id === activeSessionId}
+                                tooltip={{ children: session.title }}
+                                aria-label={`Chat: ${session.title}`}
+                                className="w-full justify-start group-data-[collapsible=icon]:justify-center"
+                                onClick={() => setActiveSessionId(session.id)}
+                            >
+                                <MessageSquare />
+                                <span>{session.title}</span>
 
-          {/* Current Chat Item (Placeholder for future multi-chat) */}
-          {/* In a multi-chat system, you would map over chat sessions here */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive // Assume current is always active for now
-              tooltip={{ children: 'Current Chat' }}
-              aria-label="Current Chat"
-              className="w-full justify-start"
-            >
-              <Link href="/chat">
-                <MessageSquare />
-                <span>Current Chat</span>
-                {/* Potential Delete Button for future multi-chat */}
-                {/* <ConfirmationDialog trigger={<Button size="icon" variant="ghost" className="ml-auto h-6 w-6"><Trash2 size={14}/></Button>} ... /> */}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+                                {/* Delete Button for each chat item */}
+                                <ConfirmationDialog
+                                    title="Delete Chat?"
+                                    description={`Are you sure you want to delete the chat "${session.title}"? This cannot be undone.`}
+                                    confirmText="Delete"
+                                    onConfirm={() => handleDeleteChat(session.id, session.title)}
+                                    trigger={
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="ml-auto h-6 w-6 text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 group-data-[collapsible=icon]:hidden"
+                                            onClick={(e) => e.stopPropagation()} // Prevent triggering session switch
+                                            aria-label={`Delete chat ${session.title}`}
+                                        >
+                                            <Trash2 size={14} />
+                                        </Button>
+                                    }
+                                />
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))
+                )}
+            </SidebarMenu>
+         </ScrollArea>
       </SidebarContent>
+
 
       <SidebarFooter className="p-2 group-data-[collapsible=icon]:hidden">
         {/* Footer content expanded */}
       </SidebarFooter>
       <SidebarFooter className="p-2 hidden group-data-[collapsible=icon]:flex justify-center">
         {/* Footer content collapsed */}
+        {/* Maybe add a New Chat icon button here as well for collapsed view */}
+         <ConfirmationDialog
+           title="Start New Chat?"
+           description="This will create a new empty chat session."
+           confirmText="Create New Chat"
+           onConfirm={handleCreateNewChat}
+           trigger={
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                    aria-label="Start New Chat"
+                >
+                    <PlusCircle size={20} />
+                </Button>
+           }
+         />
       </SidebarFooter>
     </Sidebar>
   );
