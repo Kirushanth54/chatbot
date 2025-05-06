@@ -8,11 +8,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="flex h-screen">
         <AppSidebar />
-         {/* Main content area */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-           <Header /> {/* Header is now inside the main content area */}
+       <main className="flex flex-1 flex-col w-screen overflow-hidden">
+          <Header /> {/* Header is now inside the main content area */}
           {children} {/* Page content */}
-        </div>
+        </main>
       </div>
     </SidebarProvider>
   );

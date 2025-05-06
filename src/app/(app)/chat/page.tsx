@@ -47,7 +47,9 @@ export default function ChatPage() {
     // Pass the activeSessionId to ChatInterface if it needs it (it gets it from the hook now)
     // Or simply rely on the hook's context within ChatInterface
     return (
-        <ChatInterface key={activeSessionId} /> // Use key to force re-render on session change
+        <div className="w-full">
+          <ChatInterface key={activeSessionId} /> {/* Use key to force re-render on session change */}
+        </div>
     );
   }
 
