@@ -163,8 +163,8 @@ export default function ChatInterface() {
 
 
   return (
-    <div className="flex flex-col flex-1 bg-secondary overflow-hidden">
-       <div className="flex flex-col flex-1 p-4 md:p-6 lg:p-8 overflow-hidden">
+    <div className="flex flex-col flex-1 bg-secondary overflow-hidden h-screen">
+       <div className="flex flex-col flex-1 p-4 md:p-6 lg:p-8 overflow-hidden h-full">
           {historyError && (
              <Alert variant="destructive" className="mb-4 shrink-0">
                <AlertCircle className="h-4 w-4" />
@@ -179,7 +179,7 @@ export default function ChatInterface() {
                     <p className="ml-3 text-muted-foreground">Loading messages...</p>
                </div>
            ) : (
-              <ScrollArea className="flex-1 w-full mb-4 pr-4" ref={scrollAreaRef}>
+              <ScrollArea className="flex-1 w-full mb-4 pr-4 h-full" ref={scrollAreaRef}>
                 <div className="space-y-4" ref={viewportRef}>
                    {chatHistory.length === 0 && !isBotResponding && (
                         <div className="text-center text-muted-foreground mt-10">
